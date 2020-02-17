@@ -46,7 +46,10 @@ class RNNModel(nn.Module):
     def forward(self, x):
         # Initialize hidden state with zeros
         # (layer_dim, batch_size, hidden_dim)
-        h0 = Variable(torch.zeros(self.layer_dim, x.size(0), self.hidden_dim))
+        if torch.cuda.is_available():
+            h0 = Variable(torch.zeros(self.layer_dim, x.size(0), self.hidden_dim).cuda())
+        else:
+            h0 = Variable(torch.zeros(self.layer_dim, x.size(0), self.hidden_dim))
 
         # We need to detach the hidden state to prevent exploding/vanishing gradients
         # This is part of truncated backpropagation through time (BPTT)
@@ -67,6 +70,13 @@ layer_dim = 2
 output_dim = 10
 
 model = RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
+
+##############
+#  GPU       #
+##############
+
+if torch.cuda.is_available():
+    model.cuda()
 
 criterion = nn.CrossEntropyLoss()
 
@@ -96,15 +106,32 @@ seq_dim = 28
 iter = 0
 for epoch in range(num_epochs):
     for i, (images, labels) in enumerate(train_loader):
-        images = Variable(images.view(-1, seq_dim, input_dim))
-        labels = Variable(labels)
+        ##############
+        #  GPU       #
+        ##############
+        if torch.cuda.is_available():
+            images = Variable(images.view(-1, seq_dim, input_dim).cuda())
+            labels = Variable(labels.cuda())
+        else:
+            images = Variable(images.view(-1, seq_dim, input_dim))
+            labels = Variable(labels)
+
 
         # Clear gradients w.r.t. parameters
         optimizer.zero_grad()
 
         # Forward pass to get output/logits
         # outputs.size() --> 100, 10
-        outputs = model(images)
+
+        ##############
+        #  GPU       #
+        ##############
+        # if torch.cuda.is_available():
+        #     outputs = model(images).cuda()
+        # else:
+        #     outputs = model(images)
+        # outputs = model(images)
+
         loss = criterion(outputs, labels)
 
         loss.backward()
@@ -118,14 +145,24 @@ for epoch in range(num_epochs):
             total = 0
 
             for images, labels in test_loader:
-                images = Variable(images.view(-1, seq_dim, input_dim))
-                #labels = Variable(labels)
+                ##############
+                #  GPU       #
+                ##############
+                if torch.cuda.is_available():
+                    images = Variable(images.view(-1, seq_dim, input_dim).cuda())
+                else:
+                    images = Variable(images.view(-1, seq_dim, input_dim))
+
                 outputs = model(images)
 
                 _, predicted = torch.max(outputs.data, 1)
 
                 total += labels.size(0)
-                correct += (predicted == labels).sum()
+
+                if torch.cuda.is_available():
+                    correct += (predicted.cuda() == labels.cuda()).sum()
+                else:
+                    correct += (predicted == labels).sum()
 
             accuracy = 100 * correct / total
             print('Iter: {}, Loss: {}, Accuracy: {}'.format(iter, loss.item(), accuracy))

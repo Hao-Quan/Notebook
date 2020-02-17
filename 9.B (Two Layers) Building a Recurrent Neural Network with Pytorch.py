@@ -63,14 +63,14 @@ class RNNModel(nn.Module):
 
 input_dim = 28
 hidden_dim = 100
-layer_dim = 1
+layer_dim = 2
 output_dim = 10
 
 model = RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
 
 criterion = nn.CrossEntropyLoss()
 
-learning_rate = 0.1
+learning_rate = 0.08
 
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 

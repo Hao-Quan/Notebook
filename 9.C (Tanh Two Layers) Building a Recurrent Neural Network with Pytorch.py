@@ -38,7 +38,7 @@ class RNNModel(nn.Module):
         # Building your RNN
         # batch_first=True causes input/output tensors to be of shape
         # (batch_dim, seq_dim, input_dim)
-        self.rnn = nn.RNN(input_dim, hidden_dim, layer_dim, batch_first=True, nonlinearity='relu')
+        self.rnn = nn.RNN(input_dim, hidden_dim, layer_dim, batch_first=True, nonlinearity='tanh')
 
         # Readout layer
         self.fc = nn.Linear(hidden_dim, output_dim)
@@ -70,7 +70,7 @@ model = RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
 
 criterion = nn.CrossEntropyLoss()
 
-learning_rate = 0.08
+learning_rate = 0.1
 
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 

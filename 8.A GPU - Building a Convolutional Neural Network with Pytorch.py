@@ -76,6 +76,14 @@ class CNNModel(nn.Module):
 
 model = CNNModel()
 
+#######################
+#  USE GPU FOR MODEL  #
+#######################
+
+if torch.cuda.is_available():
+    model.cuda()
+
+
 criterion = nn.CrossEntropyLoss()
 
 learning_rate = 0.01
@@ -94,7 +102,15 @@ iter = 0
 for epoch in range(num_epochs):
     for i, (images, labels) in enumerate(train_loader):
         # Load images
-        images = images.requires_grad_()
+        #######################
+        #  USE GPU FOR MODEL  #
+        #######################
+        if torch.cuda.is_available():
+            images = Variable(images.cuda())
+            labels = Variable(labels.cuda())
+
+        # images = images.requires_grad_().to(device)
+        # labels = labels.to(device)
 
         # Clear gradients w.r.t. parameters
         optimizer.zero_grad()
@@ -119,7 +135,13 @@ for epoch in range(num_epochs):
             total = 0
             # Iterate through test dataset
             for images, labels in test_loader:
-                images = images.requires_grad_()
+                #######################
+                #  USE GPU FOR MODEL  #
+                #######################
+                if torch.cuda.is_available():
+                    images = Variable(images.cuda())
+                else:
+                    labels = Variable(images.cuda())
 
                 outputs = model(images)
 
@@ -127,7 +149,13 @@ for epoch in range(num_epochs):
 
                 total += labels.size(0)
 
-                correct += (predicts == labels).sum()
+                #######################
+                #  USE GPU FOR MODEL  #
+                #######################
+                if torch.cuda.is_available():
+                    correct += (predicts.cuda() == labels.cuda()).sum()
+                else:
+                    correct += (predicts == labels).sum()
 
             accuracy = 100 * correct / total
 

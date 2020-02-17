@@ -26,112 +26,121 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                           batch_size=batch_size,
                                           shuffle=False)
 
-class CNNModel(nn.Module):
-    def __init__(self):
-        super(CNNModel, self).__init__()
+class RNNModel(nn.Module):
+    def __init__(self, input_dim, hidden_dim, layer_dim, output_dim):
+        super(RNNModel, self).__init__()
+        # Hidden dimensions
+        self.hidden_dim = hidden_dim
 
-        # Convolution 1
-        self.cnn1 = nn.Conv2d(in_channels=1, out_channels=16, kernel_size=5, stride=1, padding=2)
-        self.relu1 = nn.ReLU()
+        # Number of hidden layers
+        self.layer_dim = layer_dim
 
-        # Max pool 1
-        self.maxpool1 = nn.MaxPool2d(kernel_size=2)
+        # Building your RNN
+        # batch_first=True causes input/output tensors to be of shape
+        # (batch_dim, seq_dim, input_dim)
+        self.rnn = nn.RNN(input_dim, hidden_dim, layer_dim, batch_first=True, nonlinearity='relu')
 
-        # Convolution 2
-        self.cnn2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=5, stride=1, padding=2)
-        self.relu2 = nn.ReLU()
-
-        # Max pool 2
-        self.maxpool2 = nn.MaxPool2d(kernel_size=2)
-
-        # Fully connected 1 (readout)
-        self.fc1 = nn.Linear(32*7*7, 10)
+        # Readout layer
+        self.fc = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x):
-        # Convolution 1
-        out = self.cnn1(x)
-        out = self.relu1(out)
+        # Initialize hidden state with zeros
+        # (layer_dim, batch_size, hidden_dim)
+        h0 = Variable(torch.zeros(self.layer_dim, x.size(0), self.hidden_dim))
 
-        # Max pool 1
-        out = self.maxpool1(out)
+        # We need to detach the hidden state to prevent exploding/vanishing gradients
+        # This is part of truncated backpropagation through time (BPTT)
+        # out, hn = self.rnn(x, h0.detach())
+        out, hn = self.rnn(x, h0)
 
-        # Convolution 2
-        out = self.cnn2(out)
-        out = self.relu2(out)
+        # Index hidden state of last time step
+        # out.size() --> 100, 28, 10 (100 batch_size images, 28 time steps, 10 labels)
+        # out[:, -1, :] --> 100, 10 --> just want last (28th) time step hidden states!
+        out = self.fc(out[:, -1, :])
 
-        # Max pool 2
-        out = self.maxpool2(out)
-
-        # Resize
-        # Original size: (100, 32, 7, 7)
-        # out.size(0): 100
-        # New out size: (100, 32*7*7)
-        out = out.view(out.size(0), -1)
-
-        # Fully connected 1 (readout)
-        out = self.fc1(out)
-
+        # out.size() --> 100, 10
         return out
 
+input_dim = 28
+hidden_dim = 100
+layer_dim = 1
+output_dim = 10
 
-model = CNNModel()
+model = RNNModel(input_dim, hidden_dim, layer_dim, output_dim)
 
 criterion = nn.CrossEntropyLoss()
 
-learning_rate = 0.01
+learning_rate = 0.1
+
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
-print(model)
+
+#####################
+# Parameters in depth
+#####################
+
 print(len(list(model.parameters())))
-print(list(model.parameters())[0].size())
-print(list(model.parameters())[1].size())
-print(list(model.parameters())[2].size())
-print(list(model.parameters())[3].size())
-print(list(model.parameters())[4].size())
-print(list(model.parameters())[5].size())
+
+for i in range(len(list(model.parameters()))):
+    print(list(model.parameters())[i].size())
+
+# print(list(model.parameters())[0].size())
+# print(list(model.parameters())[1].size())
+# print(list(model.parameters())[2].size())
+# print(list(model.parameters())[3].size())
+# print(list(model.parameters())[4].size())
+# print(list(model.parameters())[5].size())
+
+seq_dim = 28
 
 iter = 0
 for epoch in range(num_epochs):
     for i, (images, labels) in enumerate(train_loader):
-        # Load images
-        images = images.requires_grad_()
+        images = Variable(images.view(-1, seq_dim, input_dim))
+        labels = Variable(labels)
 
         # Clear gradients w.r.t. parameters
         optimizer.zero_grad()
 
         # Forward pass to get output/logits
+        # outputs.size() --> 100, 10
         outputs = model(images)
-
-        # Calculate Loss: softmax --> cross entropy loss
         loss = criterion(outputs, labels)
 
-        # Getting gradients w.r.t. parameters
         loss.backward()
-
-        # Updating parameters
         optimizer.step()
 
         iter += 1
 
-        if iter % 500 == 0:
-            # Calculate Accuracy
+        if (iter % 500 == 0):
+
             correct = 0
             total = 0
-            # Iterate through test dataset
-            for images, labels in test_loader:
-                images = images.requires_grad_()
 
+            for images, labels in test_loader:
+                images = Variable(images.view(-1, seq_dim, input_dim))
+                #labels = Variable(labels)
                 outputs = model(images)
 
-                _, predicts = torch.max(outputs.data, 1)
+                _, predicted = torch.max(outputs.data, 1)
 
                 total += labels.size(0)
-
-                correct += (predicts == labels).sum()
+                correct += (predicted == labels).sum()
 
             accuracy = 100 * correct / total
+            print('Iter: {}, Loss: {}, Accuracy: {}'.format(iter, loss.item(), accuracy))
 
-            print('Iteration: {}. Loss: {}. Accuracy: {}.'.format(iter, loss.item(), accuracy))
 
-print("")
+
+
+
+
+
+
+
+
+
+
+
+
 
