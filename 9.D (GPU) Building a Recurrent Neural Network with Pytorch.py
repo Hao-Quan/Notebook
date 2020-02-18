@@ -46,6 +46,9 @@ class RNNModel(nn.Module):
     def forward(self, x):
         # Initialize hidden state with zeros
         # (layer_dim, batch_size, hidden_dim)
+        # Size: layer_dim = 1
+        #       batch_size = 100
+        #       hidden_dim = 100
         if torch.cuda.is_available():
             h0 = Variable(torch.zeros(self.layer_dim, x.size(0), self.hidden_dim).cuda())
         else:
@@ -64,6 +67,7 @@ class RNNModel(nn.Module):
         # out.size() --> 100, 10
         return out
 
+# input_dim == number of time steps
 input_dim = 28
 hidden_dim = 100
 layer_dim = 2

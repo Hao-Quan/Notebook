@@ -29,15 +29,17 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
 class RNNModel(nn.Module):
     def __init__(self, input_dim, hidden_dim, layer_dim, output_dim):
         super(RNNModel, self).__init__()
-        # Hidden dimensions
+        # Hidden dimensions: size 100
         self.hidden_dim = hidden_dim
 
-        # Number of hidden layers
+        # Number of hidden layers: size 1
         self.layer_dim = layer_dim
 
         # Building your RNN
         # batch_first=True causes input/output tensors to be of shape
         # (batch_dim, seq_dim, input_dim)
+
+        # size: input_dim=28, hidden_dim=100, layer_dim=1
         self.rnn = nn.RNN(input_dim, hidden_dim, layer_dim, batch_first=True, nonlinearity='relu')
 
         # Readout layer
@@ -45,23 +47,39 @@ class RNNModel(nn.Module):
 
     def forward(self, x):
         # Initialize hidden state with zeros
-        # (layer_dim, batch_size, hidden_dim)
+        # h0 size:   (layer_dim=1, batch_size=100, hidden_dim=100)
+
+        # Hidden dimension: 100
+        # Can be any number
+        # Similar term:
+        #   Number of neurons
+        #   Number of non-linear activation functions
+
         h0 = Variable(torch.zeros(self.layer_dim, x.size(0), self.hidden_dim))
 
         # We need to detach the hidden state to prevent exploding/vanishing gradients
         # This is part of truncated backpropagation through time (BPTT)
         # out, hn = self.rnn(x, h0.detach())
+        #       "out" size: 100*28*100
+        #       "hn"  size: 1*100*100
         out, hn = self.rnn(x, h0)
 
         # Index hidden state of last time step
         # out.size() --> 100, 28, 10 (100 batch_size images, 28 time steps, 10 labels)
         # out[:, -1, :] --> 100, 10 --> just want last (28th) time step hidden states!
         out = self.fc(out[:, -1, :])
-
         # out.size() --> 100, 10
+
         return out
 
 input_dim = 28
+
+# Hidden dimension: 100
+# Can be any number
+# Similar term:
+#   Number of neurons
+#   Number of non-linear activation functions
+
 hidden_dim = 100
 layer_dim = 1
 output_dim = 10
@@ -84,12 +102,6 @@ print(len(list(model.parameters())))
 for i in range(len(list(model.parameters()))):
     print(list(model.parameters())[i].size())
 
-# print(list(model.parameters())[0].size())
-# print(list(model.parameters())[1].size())
-# print(list(model.parameters())[2].size())
-# print(list(model.parameters())[3].size())
-# print(list(model.parameters())[4].size())
-# print(list(model.parameters())[5].size())
 
 seq_dim = 28
 

@@ -103,6 +103,11 @@ for epoch in range(num_epochs):
             for images, labels in test_loader:
                 # Load images to a Torch Variable
                 images = Variable(images.view(-1, 28*28))
+                # Hidden dimension: 100
+                # Can be any number
+                # Similar term:
+                #   Number of neurons
+                #   Number of non-linear activation functions
 
                 # Forward pass only to get logits/output
                 outputs = model(images)
